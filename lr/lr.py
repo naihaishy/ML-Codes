@@ -4,6 +4,11 @@
 
 import numpy as np
 import math
+from utils import accuracy_score, normalize
+
+"""
+LR 二项分类
+"""
 
 
 class LogisticRegression:
@@ -13,12 +18,11 @@ class LogisticRegression:
         self.params = None  # w 向量
 
     def _initialize_weights(self, n_features):
-        limit = math.sqrt(1 / n_features)
+        limit = 1.0 / math.sqrt(n_features)
         self.params = np.random.uniform(-limit, limit, (n_features,))
 
     def fit(self, X, y, n_iterations):
         """
-
         :param X: [m_samples, n_features]
         :param y:
         :param n_iterations:
@@ -43,13 +47,22 @@ def sigmoid(x):
 
 
 if __name__ == '__main__':
+    """
+    下面使用iris作为二分类数据集使用 
+    """
     from sklearn.datasets import load_iris
+    from sklearn.model_selection import train_test_split
 
-    X, y = load_iris(return_X_y=True)
+    data = load_iris()
+    # 只是用 1 2 类
+    X = normalize(data.data[data.target != 0])
+    y = data.target[data.target != 0]
+    y[y == 1] = 0
+    y[y == 2] = 1
 
-    clf = LogisticRegression(0.1)
-    clf.fit(X, y, 1000)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-    print(clf.predict(X[:2, :]))
+    clf = LogisticRegression(0.01)
+    clf.fit(X_train, y_train, 1000)
 
-    pass
+    print(accuracy_score(y_test, clf.predict(X_test)))
