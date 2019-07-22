@@ -13,3 +13,5 @@ def normalize(X, axis=-1, order=2):
 
 def accuracy_score(label, y_pred):
     return np.sum(label == y_pred, axis=0) / len(label)
+
+
