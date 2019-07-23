@@ -15,10 +15,10 @@ class Base(object):
     """
 
     def __call__(self, x):
-        pass
+        raise NotImplementedError()
 
     def gradient(self, x):
-        pass
+        raise NotImplementedError()
 
 
 class Sigmoid(Base):
