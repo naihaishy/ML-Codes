@@ -15,3 +15,5 @@ def accuracy_score(label, y_pred):
     return np.sum(label == y_pred, axis=0) / len(label)
 
 
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))

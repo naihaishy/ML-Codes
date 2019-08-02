@@ -3,11 +3,10 @@
 # @Author : naihai
 
 """"
-FM 实现
+FM 实现 用于二分类
 """
-import math
-
 import numpy as np
+from utils import sigmoid
 
 
 class FM(object):
@@ -26,9 +25,8 @@ class FM(object):
         :param n_features: n 特征维度
         :return:
         """
-        limit = 1.0 / math.sqrt(n_features)
-        self.W = np.random.uniform(-limit, limit, (n_features, 1))
-        self.V = np.random.uniform(-limit, limit, (n_features, self.K))
+        self.W = np.random.normal(0.0, 0.1, (n_features, 1))
+        self.V = np.random.normal(0.0, 0.1, (n_features, self.K))
 
         self.W = np.asmatrix(self.W)
         self.V = np.asmatrix(self.V)
@@ -43,13 +41,9 @@ class FM(object):
         """
         m_samples, n_features = X.shape
 
-        if not isinstance(X, np.matrix):
-            X = np.asmatrix(X, dtype=np.double)
-
         loss = 0.0
 
         for m in range(m_samples):
-
             inter_1 = X[m] * self.V
             inter_2 = np.multiply(X[m], X[m]) * np.multiply(self.V, self.V)  # multiply对应元素相乘
             # 完成交叉项,xi*vi*xi*vi - xi^2*vi^2
@@ -60,10 +54,11 @@ class FM(object):
 
             self.wo = self.wo - self.learning_rate * delta
             for i in range(n_features):
-                self.W[i, 0] = self.W[i, 0] - self.learning_rate * delta * X[m, i]
-                for f in range(self.K):
-                    self.V[i, f] = self.V[i, f] - self.learning_rate * delta * (
-                            X[m, i] * inter_1[0, f] - self.V[i, f] * (X[m, i] * X[m, i]))
+                if X[m, i] != 0:
+                    self.W[i, 0] = self.W[i, 0] - self.learning_rate * delta * X[m, i]
+                    for f in range(self.K):
+                        self.V[i, f] = self.V[i, f] - self.learning_rate * delta * (
+                                X[m, i] * inter_1[0, f] - self.V[i, f] * (X[m, i] * X[m, i]))
 
             loss += -np.log(sigmoid(y[m] * y_pred))
         print(loss / m_samples)
@@ -77,6 +72,10 @@ class FM(object):
         :return:
         """
         m_samples, n_features = X.shape
+
+        if not isinstance(X, np.matrix):
+            X = np.asmatrix(X, dtype=np.double)
+
         self._initialize(n_features)
         for _ in range(n_iterations):
             self._loss_and_gradient_sigmoid(X, y)
@@ -101,15 +100,3 @@ class FM(object):
             else:
                 result.append(-1)
         return result
-
-
-class Sigmoid(object):
-    def __call__(self, x):
-        return 1 / (1 + np.exp(-x))
-
-    def gradient(self, x):
-        return self.__call__(x) * (1.0 - self.__call__(x))
-
-
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
