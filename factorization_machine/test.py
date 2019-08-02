@@ -7,7 +7,7 @@ from sklearn.preprocessing import scale, normalize
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
-from fm import FM, FFM
+from factorization_machine import FM, FFM
 
 
 def fmtest():
