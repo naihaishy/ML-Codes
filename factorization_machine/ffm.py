@@ -9,7 +9,7 @@ from utils import sigmoid
 
 
 class FFM(object):
-    def __init__(self, learning_rate, K, F):
+    def __init__(self, learning_rate, K, F, feature_dict):
         self.F = F  # field num
         self.K = K  # latent factor num
         self.learning_rate = learning_rate
@@ -17,7 +17,7 @@ class FFM(object):
         self.W = None  # n向量
         self.V = None
 
-        self.featureToField = None  # feature到Filed的映射
+        self.featureToField = feature_dict  # feature到Filed的映射
 
     def _initialize(self, n_features):
         """
@@ -62,7 +62,7 @@ class FFM(object):
                             i, self.featureToField[j]] * X[m, i] * X[m, j]
             # 计算loss
             loss += -np.log(sigmoid(y[m] * y_pred))
-        print(loss/m_samples)
+        print(loss / m_samples)
 
     def fit(self, X, y, n_iterations):
         """
@@ -80,5 +80,17 @@ class FFM(object):
     def predict(self, X):
         m_samples, n_features = X.shape
 
-        if not isinstance(X, np.matrix):
-            X = np.asmatrix(X, dtype=np.double)
+        result = []
+
+        for m in range(m_samples):
+            interaction = 0.0
+            for i in range(n_features):
+                for j in range(i + 1, n_features):
+                    interaction += np.dot(self.V[i, self.featureToField[j]], self.V[j, self.featureToField[i]])
+
+            y_pred = self.wo + np.dot(self.W, X[m]) + interaction
+            if sigmoid(y_pred) >= 0.5:
+                result.append(1)
+            else:
+                result.append(-1)
+        return result

@@ -36,13 +36,16 @@ def ffmtest():
     feature_dict = dict()
 
     for i in range(64):
-        feature_dict[i] = i / 10
+        feature_dict[i] = i % 10
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=12)
 
-    model = FFM(0.1, 20, 10)
+    model = FFM(0.1, 20, 10, feature_dict)
     model.fit(X_train, y_train, 10)
-    pass
+
+    pres = model.predict(X_test)
+
+    print(accuracy_score(y_test, pres))
 
 
 if __name__ == '__main__':
