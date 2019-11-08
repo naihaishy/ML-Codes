@@ -86,7 +86,8 @@ class FFM(object):
             interaction = 0.0
             for i in range(n_features):
                 for j in range(i + 1, n_features):
-                    interaction += np.dot(self.V[i, self.featureToField[j]], self.V[j, self.featureToField[i]])
+                    interaction += np.dot(self.V[i, self.featureToField[j]],
+                                          self.V[j, self.featureToField[i]]) * X[m, i] * X[m, j]
 
             y_pred = self.wo + np.dot(self.W, X[m]) + interaction
             if sigmoid(y_pred) >= 0.5:
