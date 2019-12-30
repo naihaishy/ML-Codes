@@ -3,7 +3,7 @@
 # @Author : naihai
 
 """"
-FM 实现 用于二分类
+FM 实现 用于二分类 与 回归
 """
 import numpy as np
 from utils import sigmoid
@@ -11,30 +11,56 @@ from utils import sigmoid
 
 class FM(object):
 
-    def __init__(self, learning_rate, reg, K):
+    def __init__(self, task, lr, reg, K):
+        self.task = task  # 0 for regression 1 for classification
         self.K = K
-        self.learning_rate = learning_rate
+        self.lr = lr  # learning_rate
         self.reg = reg
         self.wo = 0
         self.W = None  # n向量
         self.V = None  # nxk矩阵
 
-    def _initialize(self, n_features):
+        self.max_value = None
+        self.min_value = None
+        assert (task == 0 or task == 1)
+
+    def _initialize(self, n_features, labels=None):
         """
         初始化参数
         :param n_features: n 特征维度
         :return:
         """
+
         self.W = np.random.normal(0.0, 0.1, (n_features, 1))
         self.V = np.random.normal(0.0, 0.1, (n_features, self.K))
 
         self.W = np.asmatrix(self.W)
         self.V = np.asmatrix(self.V)
 
-    def _loss_and_gradient_sigmoid(self, X, y):
+        if self.task == 0:
+            "regression"
+            self.max_value = np.max(labels)
+            self.min_value = np.min(labels)
+
+    def _predict(self, x):
         """
-        二分类 sigmoid
-        使用GD计算梯度与损失
+        预测单个样本
+        :param x:  one sample vector or 1xd np.matrix
+        :return: float predicted value
+        """
+        inter_1 = x * self.V
+        inter_2 = np.multiply(x, x) * np.multiply(self.V, self.V)  # multiply对应元素相乘
+        # 完成交叉项,xi*vi*xi*vi - xi^2*vi^2
+        interaction = np.sum(np.multiply(inter_1, inter_1) - inter_2)
+
+        y_pred = self.wo + (x * self.W)[0, 0] + 0.5 * interaction
+        if self.task == 0:
+            y_pred = max(self.min_value, min(y_pred, self.max_value))
+
+        return y_pred
+
+    def _calculate_gradient_and_update_weights(self, X, y):
+        """
         :param X: NxD  m_samples, n_features np.matrix
         :param y: N
         :return:
@@ -44,23 +70,35 @@ class FM(object):
         loss = 0.0
 
         for m in range(m_samples):
+            y_pred = self._predict(X[m])
             inter_1 = X[m] * self.V
-            inter_2 = np.multiply(X[m], X[m]) * np.multiply(self.V, self.V)  # multiply对应元素相乘
-            # 完成交叉项,xi*vi*xi*vi - xi^2*vi^2
-            interaction = np.sum(np.multiply(inter_1, inter_1) - inter_2) / 2.0
 
-            y_pred = self.wo + (X[m] * self.W)[0, 0] + 0.5 * interaction
-            delta = (sigmoid(y[m] * y_pred) - 1) * y[m]
+            # calculate delta
+            delta = 0.0
+            if self.task == 0:
+                "regression"
+                delta = y_pred - y[m]
+                pass
+            elif self.task == 1:
+                "classification"
+                delta = (sigmoid(y[m] * y_pred) - 1) * y[m]
 
-            self.wo = self.wo - self.learning_rate * delta
+            # update weights
+            self.wo = self.wo - self.lr * delta
             for i in range(n_features):
                 if X[m, i] != 0:
-                    self.W[i, 0] = self.W[i, 0] - self.learning_rate * delta * X[m, i]
+                    self.W[i, 0] = self.W[i, 0] - self.lr * delta * X[m, i]
                     for f in range(self.K):
-                        self.V[i, f] = self.V[i, f] - self.learning_rate * delta * (
+                        self.V[i, f] = self.V[i, f] - self.lr * delta * (
                                 X[m, i] * inter_1[0, f] - self.V[i, f] * (X[m, i] * X[m, i]))
+            if self.task == 0:
+                "regression"
+                loss += 0.5 * (y_pred - y[m]) * (y_pred - y[m])
+                pass
+            elif self.task == 1:
+                "classification"
+                loss += -np.log(sigmoid(y[m] * y_pred))
 
-            loss += -np.log(sigmoid(y[m] * y_pred))
         print(loss / m_samples)
 
     def fit(self, X, y, n_iterations):
@@ -76,9 +114,10 @@ class FM(object):
         if not isinstance(X, np.matrix):
             X = np.asmatrix(X, dtype=np.double)
 
-        self._initialize(n_features)
+        self._initialize(n_features, y)
+
         for _ in range(n_iterations):
-            self._loss_and_gradient_sigmoid(X, y)
+            self._calculate_gradient_and_update_weights(X, y)
 
     def predict(self, X):
         m_samples, n_features = X.shape
@@ -88,15 +127,16 @@ class FM(object):
 
         result = []
         for m in range(m_samples):
-            inter_1 = X[m] * self.V
-            inter_2 = np.multiply(X[m], X[m]) * np.multiply(self.V, self.V)  # multiply对应元素相乘
-            # 完成交叉项,xi*vi*xi*vi - xi^2*vi^2
-            interaction = np.sum(np.multiply(inter_1, inter_1) - inter_2) / 2.0
+            y_pred = self._predict(X[m])
 
-            y_pred = self.wo + (X[m] * self.W)[0, 0] + 0.5 * interaction
+            if self.task == 0:
+                "regression"
+                result.append(y_pred)
+            elif self.task == 1:
+                "classification"
+                if sigmoid(y_pred) >= 0.5:
+                    result.append(1)
+                else:
+                    result.append(0)
 
-            if sigmoid(y_pred) >= 0.5:
-                result.append(1)
-            else:
-                result.append(-1)
         return result
