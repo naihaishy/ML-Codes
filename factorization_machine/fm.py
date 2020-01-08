@@ -15,7 +15,7 @@ class FM(object):
         self.task = task  # 0 for regression 1 for classification
         self.K = K
         self.lr = lr  # learning_rate
-        self.reg = reg
+        self.reg = reg  # list
         self.wo = 0
         self.W = None  # n向量
         self.V = None  # nxk矩阵
@@ -42,7 +42,7 @@ class FM(object):
             self.max_value = np.max(labels)
             self.min_value = np.min(labels)
 
-    def _predict(self, x):
+    def _predict_instance(self, x):
         """
         预测单个样本
         :param x:  one sample vector or 1xd np.matrix
@@ -56,6 +56,7 @@ class FM(object):
         y_pred = self.wo + (x * self.W)[0, 0] + 0.5 * interaction
         if self.task == 0:
             y_pred = max(self.min_value, min(y_pred, self.max_value))
+            # print(y_pred)
 
         return y_pred
 
@@ -70,7 +71,7 @@ class FM(object):
         loss = 0.0
 
         for m in range(m_samples):
-            y_pred = self._predict(X[m])
+            y_pred = self._predict_instance(X[m])
             inter_1 = X[m] * self.V
 
             # calculate delta
@@ -78,23 +79,23 @@ class FM(object):
             if self.task == 0:
                 "regression"
                 delta = y_pred - y[m]
-                pass
             elif self.task == 1:
                 "classification"
                 delta = (sigmoid(y[m] * y_pred) - 1) * y[m]
 
             # update weights
-            self.wo = self.wo - self.lr * delta
+            self.wo -= self.lr * (delta + 2 * self.reg[0] * self.wo)
             for i in range(n_features):
-                if X[m, i] != 0:
-                    self.W[i, 0] = self.W[i, 0] - self.lr * delta * X[m, i]
-                    for f in range(self.K):
-                        self.V[i, f] = self.V[i, f] - self.lr * delta * (
-                                X[m, i] * inter_1[0, f] - self.V[i, f] * (X[m, i] * X[m, i]))
+                self.W[i, 0] -= self.lr * (delta * X[m, i] + 2 * self.reg[1] * self.W[i, 0])
+
+            for i in range(n_features):
+                for f in range(self.K):
+                    gradient_v = delta * (X[m, i] * inter_1[0, f] - self.V[i, f] * (X[m, i] * X[m, i]))
+                    self.V[i, f] -= self.lr * (gradient_v + 2 * self.reg[2] * self.V[i, f])
+
             if self.task == 0:
                 "regression"
                 loss += 0.5 * (y_pred - y[m]) * (y_pred - y[m])
-                pass
             elif self.task == 1:
                 "classification"
                 loss += -np.log(sigmoid(y[m] * y_pred))
@@ -127,7 +128,7 @@ class FM(object):
 
         result = []
         for m in range(m_samples):
-            y_pred = self._predict(X[m])
+            y_pred = self._predict_instance(X[m])
 
             if self.task == 0:
                 "regression"
@@ -137,6 +138,6 @@ class FM(object):
                 if sigmoid(y_pred) >= 0.5:
                     result.append(1)
                 else:
-                    result.append(0)
+                    result.append(-1)
 
         return result
