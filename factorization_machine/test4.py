@@ -50,14 +50,15 @@ def fm_fast_binary_classification_titanic():
     y = data[0].values
     y[y == 0] = -1
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=12)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=12)
     print(X_train.shape)
 
     for lr in [0.001, 0.002, 0.005, 0.01, 0.02]:
-        model = FMFast(1, lr, [0.1, 0.1, 0.1], 100)
+        model = FMFast(1, lr, [0.1, 0.1, 10], 100)
         model.fit(X_train, y_train, 100)
 
         pres = model.predict(X_test)
+        # print(pres)
         print(accuracy_score(y_test, pres))
 
 

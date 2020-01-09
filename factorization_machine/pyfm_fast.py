@@ -4,7 +4,6 @@
 
 
 import numpy as np
-from .fm_fast import FactorizationMachine as FMFast
 from .fm_fast import fm_fast_train, fm_fast_predict
 
 REGRESSION = 0
@@ -35,33 +34,6 @@ class FactorizationMachine(object):
         if self.task == REGRESSION:
             self.max_value = np.max(labels)
             self.min_value = np.min(labels)
-
-    def fit1(self, X, y, n_iterations):
-        m_samples, n_features = X.shape
-        self._initialize(n_features, y)
-
-        if not isinstance(X, np.ndarray):
-            X = np.asarray(X, np.double, order='C')
-        else:
-            X = X.copy(order='C')
-        if not isinstance(y, np.ndarray):
-            y = np.asarray(y, np.double, order='C')
-        else:
-            y = y.copy(order='C')
-
-        # 创建FactorizationMachine Cython object
-        self.fm_fast = FMFast(self.w0,
-                              self.W,
-                              self.V,
-                              self.K,
-                              n_features,
-                              self.task,
-                              self.lr,
-                              self.reg,
-                              self.max_value,
-                              self.min_value)
-
-        return self.fm_fast.fit(X, y, n_iterations)
 
     def fit(self, X, y, n_iterations, verbose=False):
         m_samples, n_features = X.shape
