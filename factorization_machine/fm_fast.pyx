@@ -1,15 +1,18 @@
 """
 Factorization machines in cython
 """
+from math import log1p
+
 import numpy as np
 cimport numpy as np
 from libc.math cimport exp, log, pow
+from cpython cimport bool
 
 DEF REGRESSION = 0
 DEF CLASSIFICATION = 1
 
 def fm_fast_train(_w0, _W, _V, _task, _lr, _reg,
-                  _max_value, _min_value, X, Y, n_iterations):
+                  _max_value, _min_value, X, Y, n_iterations, _verbose):
     cdef double w0 = _w0
     cdef np.ndarray[np.double_t, ndim=1, mode='c'] W = _W  # # n向量
     cdef np.ndarray[np.double_t, ndim=2, mode='c'] V = _V  # nxk矩阵
@@ -24,6 +27,7 @@ def fm_fast_train(_w0, _W, _V, _task, _lr, _reg,
     cdef double min_value = _min_value
     cdef int n_epochs = n_iterations
     cdef int m_samples = X.shape[0]
+    cdef bool verbose = _verbose
 
     cdef double y_pred, interaction, linear, delta
     cdef np.ndarray[np.double_t, ndim=1, mode='c'] inter_sum_1 = np.zeros(n_factors)
@@ -102,14 +106,11 @@ def fm_fast_train(_w0, _W, _V, _task, _lr, _reg,
             elif task == CLASSIFICATION:
                 loss = -log(sigmoid(y * y_pred))
             losses += loss  # + reg_w0 * w0 + loss_reg_w + loss_reg_v
-            losses_reg += loss + reg_w0 * w0 + loss_reg_w + loss_reg_v
+            losses_reg += loss + reg_w0 * abs(w0) + loss_reg_w + loss_reg_v
             # print("loss {0}, wo loss {1}, W loss {2}, V loss{3} ".format(loss, reg_w0 * w0, loss_reg_w, loss_reg_v))
         # end samples
-        print("epoch {0} loss : {1}, reg loss : {2} ".format(epoch, losses / m_samples, losses_reg / m_samples))
-        if epoch == 10:
-            lr *= 10
-        if epoch == 50:
-            lr /= 10
+        if verbose:
+            print("epoch {0} loss : {1}, reg loss : {2} ".format(epoch, losses / m_samples, losses_reg / m_samples))
     # end iterations
     return w0, W, V
 

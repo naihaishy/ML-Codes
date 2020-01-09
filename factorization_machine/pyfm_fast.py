@@ -7,6 +7,9 @@ import numpy as np
 from .fm_fast import FactorizationMachine as FMFast
 from .fm_fast import fm_fast_train, fm_fast_predict
 
+REGRESSION = 0
+CLASSIFICATION = 1
+
 
 class FactorizationMachine(object):
     def __init__(self, task, lr, reg, K):
@@ -29,8 +32,7 @@ class FactorizationMachine(object):
         self.W = np.random.normal(0.0, 0.1, (n_features,))
         self.V = np.random.normal(0.0, 0.1, (n_features, self.K))
 
-        if self.task == 0:
-            "regression"
+        if self.task == REGRESSION:
             self.max_value = np.max(labels)
             self.min_value = np.min(labels)
 
@@ -61,7 +63,7 @@ class FactorizationMachine(object):
 
         return self.fm_fast.fit(X, y, n_iterations)
 
-    def fit(self, X, y, n_iterations):
+    def fit(self, X, y, n_iterations, verbose=False):
         m_samples, n_features = X.shape
         self._initialize(n_features, y)
 
@@ -82,9 +84,14 @@ class FactorizationMachine(object):
                                                 self.reg,
                                                 self.max_value,
                                                 self.min_value,
-                                                X, y, n_iterations)
+                                                X, y, n_iterations, verbose)
 
     def predict(self, X):
+        if not isinstance(X, np.ndarray):
+            X = np.asarray(X, np.double, order='C')
+        else:
+            X = X.copy(order='C')
+
         results = fm_fast_predict(self.w0,
                                   self.W,
                                   self.V,
@@ -92,7 +99,7 @@ class FactorizationMachine(object):
                                   self.max_value,
                                   self.min_value,
                                   X)
-        if self.task == 1:
+        if self.task == CLASSIFICATION:
             for i in range(len(results)):
                 if results[i] == 0:
                     results[i] = -1

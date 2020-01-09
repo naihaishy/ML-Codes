@@ -8,6 +8,9 @@ FM 实现 用于二分类 与 回归
 import numpy as np
 from utils import sigmoid
 
+REGRESSION = 0
+CLASSIFICATION = 1
+
 
 class FM(object):
 
@@ -22,6 +25,8 @@ class FM(object):
 
         self.max_value = None
         self.min_value = None
+
+        self.norm_l2 = True
         assert (task == 0 or task == 1)
 
     def _initialize(self, n_features, labels=None):
@@ -37,8 +42,7 @@ class FM(object):
         self.W = np.asmatrix(self.W)
         self.V = np.asmatrix(self.V)
 
-        if self.task == 0:
-            "regression"
+        if self.task == REGRESSION:
             self.max_value = np.max(labels)
             self.min_value = np.min(labels)
 
@@ -68,18 +72,18 @@ class FM(object):
         """
         m_samples, n_features = X.shape
 
-        loss = 0.0
+        losses = 0.0
+        losses_reg = 0.0
 
         for m in range(m_samples):
             y_pred = self._predict_instance(X[m])
             inter_1 = X[m] * self.V
-
+            loss = 0.0
             # calculate delta
             delta = 0.0
-            if self.task == 0:
-                "regression"
+            if self.task == REGRESSION:
                 delta = y_pred - y[m]
-            elif self.task == 1:
+            elif self.task == CLASSIFICATION:
                 "classification"
                 delta = (sigmoid(y[m] * y_pred) - 1) * y[m]
 
@@ -93,18 +97,21 @@ class FM(object):
                     gradient_v = delta * (X[m, i] * inter_1[0, f] - self.V[i, f] * (X[m, i] * X[m, i]))
                     self.V[i, f] -= self.lr * (gradient_v + 2 * self.reg[2] * self.V[i, f])
 
-            if self.task == 0:
-                "regression"
-                loss += 0.5 * (y_pred - y[m]) * (y_pred - y[m])
-            elif self.task == 1:
-                "classification"
-                loss += -np.log(sigmoid(y[m] * y_pred))
+            if self.task == REGRESSION:
+                loss = 0.5 * (y_pred - y[m]) * (y_pred - y[m])
+            elif self.task == CLASSIFICATION:
+                loss = -np.log(sigmoid(y[m] * y_pred))
+            losses += loss
+            losses_reg += loss + self.reg[0] * abs(self.wo) + \
+                          self.reg[0] * np.sum(np.abs(self.W)) + \
+                          self.reg[0] * np.sum(np.abs(self.V))
 
-        print(loss / m_samples)
+        return losses / m_samples, losses_reg / m_samples
 
-    def fit(self, X, y, n_iterations):
+    def fit(self, X, y, n_iterations, verbose=False):
         """
         训练模型
+        :param verbose:
         :param X: Mxn
         :param y: M
         :param n_iterations:
@@ -117,8 +124,16 @@ class FM(object):
 
         self._initialize(n_features, y)
 
-        for _ in range(n_iterations):
-            self._calculate_gradient_and_update_weights(X, y)
+        shuffle_indices = np.arange(X.shape[0])
+
+        for epoch in range(n_iterations):
+            # shuffle data
+            np.random.shuffle(shuffle_indices)
+            X = X[shuffle_indices]
+            y = y[shuffle_indices]
+            losses, losses_reg = self._calculate_gradient_and_update_weights(X, y)
+            if verbose:
+                print("epoch {0} loss : {1}, reg loss : {2} ".format(epoch, losses, losses_reg))
 
     def predict(self, X):
         m_samples, n_features = X.shape
@@ -130,11 +145,9 @@ class FM(object):
         for m in range(m_samples):
             y_pred = self._predict_instance(X[m])
 
-            if self.task == 0:
-                "regression"
+            if self.task == REGRESSION:
                 result.append(y_pred)
-            elif self.task == 1:
-                "classification"
+            elif self.task == CLASSIFICATION:
                 if sigmoid(y_pred) >= 0.5:
                     result.append(1)
                 else:
