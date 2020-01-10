@@ -18,7 +18,7 @@ class FM(object):
         self.task = task  # 0 for regression 1 for classification
         self.K = K
         self.lr = lr  # learning_rate
-        self.reg = reg  # list
+        self.reg = reg  # list w0 W, V
         self.wo = 0
         self.W = None  # n向量
         self.V = None  # nxk矩阵

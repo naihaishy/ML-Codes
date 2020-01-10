@@ -37,7 +37,7 @@ def fm_binary_classification_titanic():
     print(X_train.shape)
 
     model = FM(1, 0.02, [0.001, 0.001, 0.01], 100)
-    model.fit(X_train, y_train, 100)
+    model.fit(X_train, y_train, 100, True)
 
     pres = model.predict(X_test)
     print(accuracy_score(y_test, pres))
@@ -79,4 +79,4 @@ def fm_fast_binary_classification():
 
 
 if __name__ == '__main__':
-    fm_fast_binary_classification_titanic()
+    fm_binary_classification_titanic()
