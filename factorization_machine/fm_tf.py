@@ -22,22 +22,19 @@ CLASSIFICATION = 1
 
 class FMTF(object):
 
-    def __init__(self, task, learning_rate, K, reg_l1, reg_l2, batch_size, n_features, n_classes=0):
+    def __init__(self, task, learning_rate, K, reg, n_features, decay_steps=100, decay_rate=0.96, n_classes=0):
         self.task = task
         self.lr = learning_rate
-        self.reg_l1 = reg_l1  # list b W, V
-        self.reg_l2 = reg_l2
+        self.reg = reg  # list b W, V
         self.n_features = n_features
         self.K = K
 
-        self.batch_size = batch_size
-
         self.X = None
         self.y = None
-        self.keep_prob = None
         self.y_pred = None
         self.y_pred_prob = None
         self.loss = None
+        self.reg_loss = None  # 正则化参数 结构loss
 
         self.n_classes = n_classes
 
@@ -54,7 +51,6 @@ class FMTF(object):
     def add_placeholder(self):
         self.X = tf.placeholder('float32', [None, self.n_features])
         self.y = tf.placeholder('float32', [None, ])
-        self.keep_prob = tf.placeholder('float32')
 
     def inference(self):
         with tf.variable_scope("linear_layer"):
@@ -68,7 +64,8 @@ class FMTF(object):
                                      initializer=tf.truncated_normal_initializer(mean=0, stddev=0.01))
                 W = tf.get_variable("W", shape=[self.n_features, self.n_classes],
                                     initializer=tf.truncated_normal_initializer(mean=0, stddev=0.01))
-            linear_terms = tf.add(tf.reduce_sum(tf.multiply(W, self.X)), w0)
+
+            linear_terms = tf.add(w0, tf.reduce_sum(tf.multiply(W, self.X), axis=1, keepdims=True))
 
         with tf.variable_scope("interaction_layer"):
             V = tf.get_variable("V", shape=[self.n_features, self.K],
@@ -79,10 +76,10 @@ class FMTF(object):
 
             interaction_terms = tf.multiply(0.5, tf.reduce_mean(tf.subtract(inter_1, inter_2), 1, keepdims=True))
 
-            self.y_pred = tf.add(linear_terms, interaction_terms)
+        self.y_pred = tf.add(linear_terms, interaction_terms)
 
-            if self.task == CLASSIFICATION:
-                self.y_pred_prob = tf.nn.softmax(self.y_pred)
+        if self.task == CLASSIFICATION:
+            self.y_pred_prob = tf.nn.softmax(self.y_pred)
 
     def add_loss(self):
         if self.task == REGRESSION:
@@ -92,6 +89,16 @@ class FMTF(object):
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.y_pred)
             cross_entropy_loss = tf.reduce_mean(cross_entropy)
             self.loss = cross_entropy_loss
+
+        with tf.variable_scope("linear_layer", reuse=True):
+            w0 = tf.get_variable("w0")
+            W = tf.get_variable("W")
+            self.reg_loss = tf.add(self.reg[0] * tf.reduce_sum(tf.square(w0)),
+                                   self.reg[1] * tf.reduce_sum(tf.square(W)))  # L2损失
+        with tf.variable_scope("interaction_layer", reuse=True):
+            V = tf.get_variable("V")
+            self.reg_loss = tf.add(self.reg_loss, self.reg[2] * tf.reduce_sum(tf.square(V)))  # L2损失
+        self.loss = self.loss
         tf.summary.scalar('loss', self.loss)
 
     def add_accuracy(self):
@@ -105,11 +112,11 @@ class FMTF(object):
     def train(self):
         # Applies exponential decay to learning rate
         self.global_step = tf.Variable(0, trainable=False)
+        self.lr = tf.train.exponential_decay(self.lr, self.global_step, decay_steps=100, decay_rate=0.96)
         optimizer = tf.train.GradientDescentOptimizer(self.lr)
+        # optimizer = tf.train.FtrlOptimizer(self.lr, l1_regularization_strength=0.1, l2_regularization_strength=0.1)
 
-        extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        with tf.control_dependencies(extra_update_ops):
-            self.train_op = optimizer.minimize(self.loss, global_step=self.global_step)
+        self.train_op = optimizer.minimize(self.loss, global_step=self.global_step)
 
     def build_graph(self):
         self.add_placeholder()

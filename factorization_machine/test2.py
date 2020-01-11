@@ -24,7 +24,7 @@ def fm_fast_regression():
     X_train = scaler.transform(X_train)
     X_test = scaler.transform(X_test)
 
-    model = FMFast(0, 0.0001, [0.01, 0.01, 0.01], 100)
+    model = FMFast(0, 0.000001, [0.1, 0.1, 0.1], 100)
     model.fit(X_train, y_train, 100, True)
 
     pres = model.predict(X_test)
