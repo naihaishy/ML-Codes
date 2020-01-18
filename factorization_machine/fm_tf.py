@@ -113,9 +113,10 @@ class FMTF(object):
         # Applies exponential decay to learning rate
         self.global_step = tf.Variable(0, trainable=False)
         self.lr = tf.train.exponential_decay(self.lr, self.global_step, decay_steps=100, decay_rate=0.96)
-        optimizer = tf.train.GradientDescentOptimizer(self.lr)
-        # optimizer = tf.train.FtrlOptimizer(self.lr, l1_regularization_strength=0.1, l2_regularization_strength=0.1)
-
+        # optimizer = tf.train.GradientDescentOptimizer(self.lr)
+        # optimizer = tf.train.FtrlOptimizer(self.lr, l1_regularization_strength=0.01, l2_regularization_strength=0.01)
+        # optimizer = tf.train.AdamOptimizer(self.lr)
+        optimizer = tf.train.AdagradOptimizer(self.lr)
         self.train_op = optimizer.minimize(self.loss, global_step=self.global_step)
 
     def build_graph(self):

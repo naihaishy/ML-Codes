@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # initialize FM model
     m_samples, n_features = X_train.shape
     n_factors = 1000
-    lr = 0.05
+    lr = 0.01
     model = FMTF(0, lr, n_factors, [0.1, 0.1, 0.1], n_features, decay_steps=100, decay_rate=0.8)
     model.build_graph()  # build graph for model
 
@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
     best_valid_loss = math.inf
     last_valid_improvement = 0
-    require_improvement = 100
+    require_improvement = 200
 
     with tf.Session() as sess:
         # TODO: with every epoch, print training accuracy and validation accuracy
@@ -76,6 +76,10 @@ if __name__ == '__main__':
             valid_feed_dict = {model.X: X_valid, model.y: y_valid}
             valid_loss, valid_reg_loss = sess.run([model.loss, model.reg_loss], feed_dict=valid_feed_dict)
             print("epoch valid {0} loss : {1} , reg_loss : {2} ".format(epoch, valid_loss, valid_reg_loss))
+
+            if epoch % 1000 == 0:
+                model.lr += 0.01
+                print(model.lr)
 
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss

@@ -13,7 +13,7 @@ if __name__ == '__main__':
     X = data[data.columns[1:]]
     y = data[0].values
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=12)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=12)
     print(X_train.shape)
 
     # 预处理
@@ -26,6 +26,7 @@ if __name__ == '__main__':
     test_data = xl.DMatrix(data=X_test, label=y_test)
 
     fm = xl.create_fm()
+    fm.disableNorm()
     fm.setTrain(train_data)
     fm.setTest(test_data)
 
